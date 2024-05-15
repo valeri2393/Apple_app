@@ -1,38 +1,50 @@
 import streamlit as st
 import yfinance as yf
+import pandas as pd
 
-#метод st.set_page_config() устан конфигурацию для приложения
-#заголовок страницы (page_title)
-#иконка страницы (page_icon) 
-#раскладка страницы (layout) 
 st.set_page_config(page_title="Котировки компании Apple", page_icon=":chart_with_upwards_trend:", layout="wide")
 
-
-
-# Заголовок приложения
 st.title('Данные о котировках компании Apple')
 
-# Получаем данные о котировках компании Apple
-apple_data = yf.download('AAPL')
+# виджет для выбора количества дней для анализа данных (слайдер)
+num_days = st.slider('Выберите количество дней для анализа данных', min_value=1, max_value=100, value=30, step=1)
 
-# график цены закрытия акций
-st.subheader('График цены закрытия')    #подзаголовок на странице приложения
-st.line_chart(apple_data['Close'])   #график на странице приложения
+# данные о котировках за выбранный период
+apple_data = yf.download('AAPL', period=f'{num_days}d')
 
-# Отображаем статистику по ценам акций
+st.subheader('График')
+
+# виджет для выбора графика
+chart_type = st.selectbox('Выберите тип графика', ['Цена закрытия', 'Объем торгов'])
+
+# вывести график в зависимости от выбранного типа
+if chart_type == 'Цена закрытия':
+    st.line_chart(apple_data['Close'])
+elif chart_type == 'Объем торгов':
+    st.line_chart(apple_data['Volume'])
+
 st.subheader('Статистика по ценам акций')
+st.write(apple_data.describe())
 
-#выводим данные на страницу приложения
-st.write(apple_data.describe())     #метод describe() - статистика по ценам
-
-# Отображаем последние несколько строк данных
 st.subheader('Последние данные')
-st.write(apple_data.tail())     #метод tail() - отображает последние несколько строк данных
+st.write(apple_data.tail())
 
-st.subheader('Графики цен открытия и закрытия')
-st.line_chart(apple_data[['Open', 'Close']])
-st.subheader('График объема торгов')
-st.line_chart(apple_data['Volume'])
+# виджеты для загрузки и выгрузки данных
+st.subheader('Загрузка и выгрузка данных')
 
+# Виджет для загрузки данных
+uploaded_file = st.file_uploader("Выберите файл для загрузки", type=['csv', 'xlsx'])
 
+if uploaded_file is not None:
+    if uploaded_file.type == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        df = pd.read_excel(uploaded_file)
+    else:
+        df = pd.read_csv(uploaded_file)
+    st.write(df)
 
+# скачать данные
+st.write(' ')
+st.subheader('Скачать данные')
+if st.button('Скачать данные в формате CSV'):
+    apple_data.to_csv('apple_data.csv', index=False)
+    st.download_button(label='Скачать CSV', data='apple_data.csv', file_name='apple_data.csv', mime='text/csv')
